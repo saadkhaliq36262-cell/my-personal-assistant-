@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Header } from '@/components/Header';
@@ -14,10 +14,12 @@ import { AlertCircle, X } from 'lucide-react';
 
 const STORAGE_KEY_MESSAGES = 'my_english_coach_messages_v1';
 const STORAGE_KEY_SETTINGS = 'my_english_coach_settings_v1';
+const STORAGE_KEY_API_KEY = 'my_english_coach_api_key_v1';
 
 export default function HomePage() {
   const [level, setLevel] = useState<EnglishLevel>('intermediate');
   const [topic, setTopic] = useState<PracticeTopic>('free');
+  const [apiKey, setApiKey] = useState<string>('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -31,7 +33,6 @@ export default function HomePage() {
     speak,
     cancel: cancelSpeech,
     isSpeaking,
-    isSupported: isSpeechSynthesisSupported,
     voices,
     selectedVoice,
     setSelectedVoice,
@@ -48,7 +49,6 @@ export default function HomePage() {
     progressPercent,
     goalReached,
     changeGoal,
-    resetTimer,
   } = usePracticeTimer();
 
   // Scroll to bottom on new messages
@@ -89,12 +89,16 @@ export default function HomePage() {
 
         const res = await fetch('/api/chat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(apiKey ? { 'x-gemini-api-key': apiKey } : {}),
+          },
           body: JSON.stringify({
             message: trimmedText,
             level,
             topic,
             history: historyContext,
+            apiKey: apiKey || undefined,
           }),
         });
 
@@ -138,7 +142,7 @@ export default function HomePage() {
         setIsThinking(false);
       }
     },
-    [autoSpeak, isThinking, level, messages, scrollToBottom, speak, topic]
+    [apiKey, autoSpeak, isThinking, level, messages, scrollToBottom, speak, topic]
   );
 
   // Speech Recognition Hook
@@ -191,6 +195,11 @@ export default function HomePage() {
         if (typeof parsed.autoSpeak === 'boolean') setAutoSpeak(parsed.autoSpeak);
         if (typeof parsed.rate === 'number') setRate(parsed.rate);
       }
+
+      const savedKey = localStorage.getItem(STORAGE_KEY_API_KEY);
+      if (savedKey) {
+        setApiKey(savedKey);
+      }
     } catch (e) {
       console.warn('LocalStorage restoration error:', e);
     }
@@ -216,6 +225,20 @@ export default function HomePage() {
       // ignore
     }
   }, [level, topic, autoSpeak, rate]);
+
+  const handleApiKeyChange = (newKey: string) => {
+    setApiKey(newKey);
+    try {
+      if (newKey) {
+        localStorage.setItem(STORAGE_KEY_API_KEY, newKey);
+      } else {
+        localStorage.removeItem(STORAGE_KEY_API_KEY);
+      }
+    } catch (e) {
+      // ignore
+    }
+    setErrorToast(null);
+  };
 
   const handleClearChat = () => {
     setMessages([]);
@@ -321,6 +344,8 @@ export default function HomePage() {
         goalMinutes={goalMinutes}
         onGoalChange={changeGoal}
         onClearHistory={handleClearChat}
+        apiKey={apiKey}
+        onApiKeyChange={handleApiKeyChange}
       />
     </div>
   );

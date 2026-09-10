@@ -6,28 +6,33 @@ export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey || apiKey === 'your_gemini_api_key_here') {
-      return NextResponse.json(
-        {
-          error: 'GEMINI_API_KEY is not configured on the server. Please add your GEMINI_API_KEY to .env.local for local development or Vercel Environment Variables for production.',
-        },
-        { status: 500 }
-      );
-    }
-
     const body = await req.json();
     const {
       message,
       level = 'intermediate',
       topic = 'free',
       history = [],
+      apiKey: customKey,
     }: {
       message?: string;
       level?: EnglishLevel;
       topic?: PracticeTopic;
       history?: { role: string; content: string }[];
+      apiKey?: string;
     } = body;
+
+    // Use server environment variable or client-supplied custom key from settings
+    const headerKey = req.headers.get('x-gemini-api-key');
+    const apiKey = process.env.GEMINI_API_KEY || customKey || headerKey;
+
+    if (!apiKey || apiKey === 'your_gemini_api_key_here') {
+      return NextResponse.json(
+        {
+          error: 'GEMINI_API_KEY is not configured. Please add your key in the Settings ⚙️ menu or configure GEMINI_API_KEY in Vercel Environment Variables.',
+        },
+        { status: 401 }
+      );
+    }
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return NextResponse.json(
@@ -111,7 +116,7 @@ Respond in JSON format with the following fields:
         if (result) break;
       } catch (err: any) {
         lastError = err;
-        console.warn(`Model ${modelName} failed, trying next model:`, err?.message);
+        console.warn(`Model ${modelName} failed, trying next:`, err?.message);
       }
     }
 

@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   X,
   Volume2,
@@ -9,6 +9,9 @@ import {
   Trash2,
   HelpCircle,
   Sparkles,
+  Key,
+  Eye,
+  EyeOff,
   Check,
 } from 'lucide-react';
 import { PracticeGoalMinutes } from '@/types';
@@ -28,6 +31,8 @@ interface SettingsModalProps {
   goalMinutes: PracticeGoalMinutes;
   onGoalChange: (goal: PracticeGoalMinutes) => void;
   onClearHistory: () => void;
+  apiKey: string;
+  onApiKeyChange: (key: string) => void;
 }
 
 const SPEED_OPTIONS = [
@@ -50,8 +55,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   goalMinutes,
   onGoalChange,
   onClearHistory,
+  apiKey,
+  onApiKeyChange,
 }) => {
+  const [showKey, setShowKey] = useState(false);
+  const [tempKey, setTempKey] = useState(apiKey);
+  const [savedBadge, setSavedBadge] = useState(false);
+
   if (!isOpen) return null;
+
+  const handleSaveKey = () => {
+    onApiKeyChange(tempKey.trim());
+    setSavedBadge(true);
+    setTimeout(() => setSavedBadge(false), 2000);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
@@ -74,7 +91,50 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-6 space-y-6 overflow-y-auto flex-1 text-sm">
-          {/* 1. Speech Speed */}
+          {/* 1. Gemini API Key Setting */}
+          <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2 text-indigo-200 font-semibold text-xs sm:text-sm">
+                <Key className="w-4 h-4 text-indigo-400" />
+                <span>Gemini API Key</span>
+              </div>
+              {savedBadge && (
+                <span className="inline-flex items-center space-x-1 text-[11px] text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/40">
+                  <Check className="w-3 h-3" />
+                  <span>Saved!</span>
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-indigo-300/80">
+              Your API key is saved securely in your browser&apos;s local memory and never exposed to others.
+            </p>
+            <div className="flex items-center space-x-2">
+              <div className="relative flex-1">
+                <input
+                  type={showKey ? 'text' : 'password'}
+                  value={tempKey}
+                  onChange={(e) => setTempKey(e.target.value)}
+                  placeholder="Paste your Gemini API key here..."
+                  className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-100 pr-10 focus:outline-none focus:border-indigo-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKey(!showKey)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                >
+                  {showKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+              <button
+                onClick={handleSaveKey}
+                className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition-colors"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+
+          {/* 2. Speech Speed */}
           <div>
             <div className="flex items-center space-x-2 text-slate-200 font-semibold mb-2">
               <Gauge className="w-4 h-4 text-indigo-400" />
@@ -100,7 +160,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
-          {/* 2. Voice Selector */}
+          {/* 3. Voice Selector */}
           <div>
             <div className="flex items-center space-x-2 text-slate-200 font-semibold mb-2">
               <Volume2 className="w-4 h-4 text-indigo-400" />
@@ -129,7 +189,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </select>
           </div>
 
-          {/* 3. Auto-play Voice Toggle */}
+          {/* 4. Auto-play Voice Toggle */}
           <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800">
             <div>
               <div className="font-semibold text-slate-200 text-xs sm:text-sm">
@@ -153,7 +213,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
           </div>
 
-          {/* 4. Daily Speaking Goal */}
+          {/* 5. Daily Speaking Goal */}
           <div>
             <div className="flex items-center space-x-2 text-slate-200 font-semibold mb-2">
               <Clock className="w-4 h-4 text-indigo-400" />
@@ -176,7 +236,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
-          {/* 5. Clear History */}
+          {/* 6. Clear History */}
           <div className="pt-2 border-t border-slate-800">
             <button
               onClick={() => {
@@ -192,7 +252,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
           </div>
 
-          {/* 6. Help / Tips */}
+          {/* 7. Help / Tips */}
           <div className="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-500/20 text-xs text-indigo-200/90 space-y-1.5">
             <div className="flex items-center space-x-1.5 font-semibold text-indigo-300">
               <HelpCircle className="w-3.5 h-3.5" />
