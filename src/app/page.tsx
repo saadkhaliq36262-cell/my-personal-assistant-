@@ -25,6 +25,7 @@ export default function HomePage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [errorToast, setErrorToast] = useState<string | null>(null);
   const [activeSpeakingId, setActiveSpeakingId] = useState<string | null>(null);
+  const [liveSpeechText, setLiveSpeechText] = useState<string>('');
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
@@ -78,6 +79,7 @@ export default function HomePage() {
       setMessages((prev) => [...prev, newMsg]);
       setIsThinking(true);
       setErrorToast(null);
+      setLiveSpeechText('');
       scrollToBottom();
 
       try {
@@ -145,22 +147,17 @@ export default function HomePage() {
     [apiKey, autoSpeak, isThinking, level, messages, scrollToBottom, speak, topic]
   );
 
-  // Speech Recognition Hook
+  // Speech Recognition Hook (Only populates text for manual review; does NOT auto-send)
   const {
     isListening,
-    interimTranscript,
-    fullTranscript,
     isSupported: isSpeechRecSupported,
     startListening,
     stopListening,
     resetTranscript,
     error: speechError,
   } = useSpeechRecognition({
-    onResult: (finalText) => {
-      if (finalText && finalText.trim().length > 0) {
-        handleSendMessage(finalText);
-        resetTranscript();
-      }
+    onTranscriptChange: (text) => {
+      setLiveSpeechText(text);
     },
     onError: (err) => {
       setErrorToast(err);
@@ -244,6 +241,7 @@ export default function HomePage() {
     setMessages([]);
     cancelSpeech();
     setActiveSpeakingId(null);
+    setLiveSpeechText('');
     try {
       localStorage.removeItem(STORAGE_KEY_MESSAGES);
     } catch (e) {
@@ -302,7 +300,9 @@ export default function HomePage() {
           <TopicStarter
             topic={topic}
             level={level}
-            onSelectSuggestion={(suggestion) => handleSendMessage(suggestion)}
+            onSelectSuggestion={(suggestion) => {
+              setLiveSpeechText(suggestion);
+            }}
             onStartSpeaking={() => startListening()}
           />
         ) : (
@@ -322,11 +322,11 @@ export default function HomePage() {
         status={currentStatus}
         isListening={isListening}
         isSpeaking={isSpeaking}
-        interimTranscript={interimTranscript || fullTranscript}
+        liveSpeechText={liveSpeechText}
         onStartListening={startListening}
         onStopListening={stopListening}
         onStopSpeaking={handleStopSpeaking}
-        onSendTextMessage={handleSendMessage}
+        onSendMessage={handleSendMessage}
         isSpeechSupported={isSpeechRecSupported}
       />
 

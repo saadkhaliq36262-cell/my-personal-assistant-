@@ -3,13 +3,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface UseSpeechRecognitionOptions {
-  onResult?: (transcript: string) => void;
+  onTranscriptChange?: (transcript: string) => void;
   onError?: (error: string) => void;
   lang?: string;
 }
 
 export function useSpeechRecognition({
-  onResult,
+  onTranscriptChange,
   onError,
   lang = 'en-US',
 }: UseSpeechRecognitionOptions = {}) {
@@ -21,15 +21,15 @@ export function useSpeechRecognition({
 
   const recognitionRef = useRef<any>(null);
   const isListeningRef = useRef(false);
-  const onResultRef = useRef(onResult);
+  const onTranscriptChangeRef = useRef(onTranscriptChange);
   const onErrorRef = useRef(onError);
   const recordedTextRef = useRef('');
 
   // Keep callback refs fresh without triggering effect re-runs
   useEffect(() => {
-    onResultRef.current = onResult;
+    onTranscriptChangeRef.current = onTranscriptChange;
     onErrorRef.current = onError;
-  }, [onResult, onError]);
+  }, [onTranscriptChange, onError]);
 
   // Initialize Speech Recognition once
   useEffect(() => {
@@ -74,10 +74,14 @@ export function useSpeechRecognition({
         recordedTextRef.current = fullCaptured;
         setTranscript(currentFinal);
         setInterimTranscript(currentInterim);
+
+        if (fullCaptured && onTranscriptChangeRef.current) {
+          onTranscriptChangeRef.current(fullCaptured);
+        }
       };
 
       recognition.onerror = (event: any) => {
-        // 'aborted' is a normal event when stopping or restarting speech recognition
+        // 'aborted' is a normal event when stopping speech recognition
         if (event.error === 'aborted') {
           return;
         }
@@ -112,17 +116,13 @@ export function useSpeechRecognition({
       };
 
       recognition.onend = () => {
-        const wasListening = isListeningRef.current;
         isListeningRef.current = false;
         setIsListening(false);
 
-        // If speech was recorded when recognition ended, submit it
+        // Keep whatever speech was transcribed so user can review and edit it
         const finalText = recordedTextRef.current.trim();
-        if (wasListening && finalText && onResultRef.current) {
-          onResultRef.current(finalText);
-          recordedTextRef.current = '';
-          setTranscript('');
-          setInterimTranscript('');
+        if (finalText && onTranscriptChangeRef.current) {
+          onTranscriptChangeRef.current(finalText);
         }
       };
 
@@ -159,7 +159,6 @@ export function useSpeechRecognition({
       setIsListening(true);
       recognitionRef.current.start();
     } catch (e: any) {
-      // If already active or in starting state, stop first then start
       try {
         recognitionRef.current.stop();
         setTimeout(() => {
@@ -187,13 +186,9 @@ export function useSpeechRecognition({
       }
     }
 
-    // Submit whatever speech was recorded
     const finalText = recordedTextRef.current.trim();
-    if (finalText && onResultRef.current) {
-      onResultRef.current(finalText);
-      recordedTextRef.current = '';
-      setTranscript('');
-      setInterimTranscript('');
+    if (finalText && onTranscriptChangeRef.current) {
+      onTranscriptChangeRef.current(finalText);
     }
   }, []);
 
