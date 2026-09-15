@@ -1,18 +1,20 @@
-﻿export type EnglishLevel = 'beginner' | 'intermediate' | 'advanced';
+export type EnglishLevel = 'beginner' | 'intermediate' | 'advanced';
 
 export type PracticeTopic =
   | 'free'
   | 'daily'
   | 'interview'
   | 'travel'
+  | 'business'
   | 'shopping'
-  | 'introduction'
   | 'tech'
-  | 'family';
+  | 'hobbies';
 
 export type PracticeGoalMinutes = 5 | 10 | 15 | 30;
 
 export type TutorStatus = 'idle' | 'listening' | 'thinking' | 'speaking' | 'error';
+
+export type ActiveNavTab = 'practice' | 'topics' | 'progress' | 'vocabulary';
 
 export interface ChatMessage {
   id: string;
@@ -27,6 +29,7 @@ export interface ChatMessage {
   hasMistakes?: boolean;
   topic?: PracticeTopic;
   level?: EnglishLevel;
+  vocabWords?: { word: string; meaning: string }[];
 }
 
 export interface CoachApiResponse {
@@ -38,13 +41,44 @@ export interface CoachApiResponse {
   aiResponse: string;
   followUpQuestion: string;
   encouragementTip?: string;
+  vocabWords?: { word: string; meaning: string }[];
 }
 
 export interface TopicInfo {
   id: PracticeTopic;
   title: string;
   icon: string;
+  category: string;
   description: string;
   starterPrompt: string;
   starterSuggestions: string[];
+}
+
+export interface VocabItem {
+  id: string;
+  word: string;
+  meaning: string;
+  example?: string;
+  topic?: PracticeTopic;
+  createdAt: number;
+  mastered?: boolean;
+}
+
+export interface PracticeSessionSummary {
+  id: string;
+  topic: PracticeTopic;
+  level: EnglishLevel;
+  messagesCount: number;
+  durationMinutes: number;
+  correctionsCount: number;
+  strengths: string;
+  focusAreas: string;
+  timestamp: number;
+}
+
+export interface ProgressStats {
+  totalSessions: number;
+  totalMinutes: number;
+  totalConversations: number;
+  weeklyActivity: { [day: string]: number }; // e.g. { 'Mon': 10, 'Tue': 15 }
 }

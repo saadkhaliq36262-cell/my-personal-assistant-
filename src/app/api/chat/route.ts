@@ -21,14 +21,13 @@ export async function POST(req: NextRequest) {
       apiKey?: string;
     } = body;
 
-    // Use server environment variable or client-supplied custom key from settings
     const headerKey = req.headers.get('x-gemini-api-key');
     const apiKey = process.env.GEMINI_API_KEY || customKey || headerKey;
 
     if (!apiKey || apiKey === 'your_gemini_api_key_here') {
       return NextResponse.json(
         {
-          error: 'GEMINI_API_KEY is not configured. Please add your key in the Settings ⚙️ menu or configure GEMINI_API_KEY in Vercel Environment Variables.',
+          error: 'GEMINI_API_KEY is not configured. Please add your key in Settings ⚙️ or configure GEMINI_API_KEY in Vercel Environment Variables.',
         },
         { status: 401 }
       );
@@ -51,26 +50,30 @@ export async function POST(req: NextRequest) {
     }[level] || 'Intermediate English level.';
 
     const systemInstruction = `
-You are "My English Coach", a warm, encouraging, and expert personal English Speaking Tutor.
-Your mission is to help the student build confidence and fluency in speaking English.
+You are "My English Coach", a warm, encouraging, and expert personal English Speaking Tutor and SaaS language learning partner.
+Your mission is to help the student build speaking confidence, grammatical precision, and natural fluency in English.
 
 Student English Level: ${level.toUpperCase()} (${levelGuide})
 Active Practice Topic: ${topic.toUpperCase()}
 
-For every spoken sentence from the student:
-1. Analyze the sentence for grammatical mistakes, incorrect tenses, awkward prepositions, or unnatural word choices.
-2. If there are noticeable mistakes:
-   - Provide the corrected sentence.
-   - Explain the specific rule or mistake in 1 or 2 simple, friendly sentences (never condescending).
-   - Provide a natural/native version.
-3. If the sentence is already grammatically accurate:
+For every spoken or typed sentence from the student:
+1. Understand their intended meaning with empathy.
+2. Analyze the sentence for important grammatical mistakes, incorrect tenses, awkward prepositions, or unnatural word choices.
+   - Do NOT aggressively nitpick tiny punctuation if the sentence is natural; focus on high-impact speaking improvements.
+3. If there are mistakes:
+   - Mark hasMistakes as true.
+   - Provide the corrected sentence ("corrected").
+   - Explain the specific rule simply in 1 or 2 friendly, beginner-accessible sentences ("explanation").
+   - Provide a natural/native version ("naturalVersion").
+4. If the sentence is grammatically sound:
    - Mark hasMistakes as false.
-   - For explanation, provide a brief praise (e.g. "Excellent! Your sentence is grammatically correct.").
+   - For explanation, provide brief encouragement (e.g. "Excellent! Your sentence is natural and grammatically accurate.").
    - For naturalVersion, give an optional alternative phrasing or idiom that native speakers often use.
-4. Reply naturally and warmly to the content of what the student said (do NOT sound like an exam robot, sound like an empathetic conversation partner!).
-5. Always include a follow-up question related to the active topic (${topic}) to prompt the student to practice speaking their next sentence.
+5. Provide a warm, conversational AI reply that directly responds to the content of what the student said ("aiResponse"). Keep responses concise and natural (2 to 3 sentences).
+6. Always include a follow-up question related to the active topic (${topic}) to prompt the student's next practice turn ("followUpQuestion").
+7. Extract 1 or 2 useful English vocabulary words or phrasal verbs from the exchange with simple definitions ("vocabWords").
 
-IMPORTANT: You must output ONLY valid JSON matching the requested schema. Do not wrap in markdown quotes if possible, or return strictly parseable JSON.
+IMPORTANT: You must output ONLY valid JSON matching the requested schema without markdown fences.
 `;
 
     const recentHistoryText = (history || [])
@@ -87,14 +90,17 @@ Student just said:
 
 Respond in JSON format with the following fields:
 {
-  "hasMistakes": boolean (true if student made grammar/tense/vocab mistakes, false otherwise),
+  "hasMistakes": boolean,
   "original": "${message.trim().replace(/"/g, '\\"')}",
-  "corrected": string (the grammatically correct version of what they said),
-  "explanation": string (simple, encouraging 1-2 sentence explanation of the mistake or praise),
-  "naturalVersion": string (how a native speaker would say this naturally),
-  "aiResponse": string (friendly conversational reply to what they said),
-  "followUpQuestion": string (engaging question to prompt the student's next response),
-  "encouragementTip": string (optional short motivational phrase like "Great effort!" or "You are doing great!")
+  "corrected": string,
+  "explanation": string,
+  "naturalVersion": string,
+  "aiResponse": string,
+  "followUpQuestion": string,
+  "encouragementTip": string,
+  "vocabWords": [
+    { "word": string, "meaning": string }
+  ]
 }
 `;
 
@@ -127,7 +133,7 @@ Respond in JSON format with the following fields:
     const responseText = result.response.text();
     
     // Parse JSON safely
-    let parsed: CoachApiResponse;
+    let parsed: any;
     try {
       parsed = JSON.parse(responseText);
     } catch (parseError) {
@@ -139,11 +145,12 @@ Respond in JSON format with the following fields:
       hasMistakes: Boolean(parsed.hasMistakes),
       original: parsed.original || message,
       corrected: parsed.corrected || message,
-      explanation: parsed.explanation || 'Great job practicing!',
+      explanation: parsed.explanation || 'Great job practicing your English!',
       naturalVersion: parsed.naturalVersion || parsed.corrected || message,
       aiResponse: parsed.aiResponse || "That's great! Let's keep practicing.",
       followUpQuestion: parsed.followUpQuestion || "What else would you like to share?",
       encouragementTip: parsed.encouragementTip || "Keep up the great work!",
+      vocabWords: Array.isArray(parsed.vocabWords) ? parsed.vocabWords.slice(0, 3) : [],
     };
 
     return NextResponse.json(sanitizedResponse);

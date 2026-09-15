@@ -1,23 +1,26 @@
 import { TopicInfo, EnglishLevel } from '@/types';
 
-export const ENGLISH_LEVELS: { id: EnglishLevel; label: string; tag: string; description: string }[] = [
+export const ENGLISH_LEVELS: { id: EnglishLevel; label: string; tag: string; description: string; focus: string }[] = [
   {
     id: 'beginner',
     label: 'Beginner',
-    tag: 'A1-A2',
-    description: 'Simple vocabulary, short sentences, gentle basic corrections.'
+    tag: 'A1–A2',
+    description: 'Simple vocabulary, short sentences, and gentle basic grammar corrections.',
+    focus: 'Everyday words, basic tenses & sentence structure'
   },
   {
     id: 'intermediate',
     label: 'Intermediate',
-    tag: 'B1-B2',
-    description: 'Natural conversational pace, phrasal verbs, daily idioms.'
+    tag: 'B1–B2',
+    description: 'Natural conversational pace, practical idioms, phrasal verbs, and connecting thoughts.',
+    focus: 'Fluency, natural phrasing & conversational idioms'
   },
   {
     id: 'advanced',
     label: 'Advanced',
-    tag: 'C1-C2',
-    description: 'Sophisticated phrasing, subtle nuance, professional vocabulary.'
+    tag: 'C1–C2',
+    description: 'Sophisticated phrasing, subtle nuance, professional vocabulary, and native expressions.',
+    focus: 'Nuance, advanced vocabulary & professional polish'
   }
 ];
 
@@ -26,7 +29,8 @@ export const PRACTICE_TOPICS: TopicInfo[] = [
     id: 'free',
     title: 'Free Conversation',
     icon: '💬',
-    description: 'Chat freely about anything on your mind.',
+    category: 'General',
+    description: 'Chat freely about anything on your mind with no set rules.',
     starterPrompt: "Hi there! I am your English coach. How are you doing today? Tell me what you did today or what is on your mind!",
     starterSuggestions: [
       "I had a busy day at work today.",
@@ -38,19 +42,21 @@ export const PRACTICE_TOPICS: TopicInfo[] = [
     id: 'daily',
     title: 'Daily Life & Routines',
     icon: '☕',
-    description: 'Talk about your habits, meals, hobbies, and day-to-day life.',
-    starterPrompt: "Let us talk about your daily routines! What is your morning routine like after you wake up?",
+    category: 'Lifestyle',
+    description: 'Talk about your habits, meals, morning routines, and day-to-day life.',
+    starterPrompt: "Let's talk about your daily routines! What is your morning routine like after you wake up?",
     starterSuggestions: [
       "I usually wake up at 7 AM and drink a hot cup of coffee.",
       "In the evening, I like to cook dinner and watch movies.",
-      "On weekends, I enjoy going for a walk in the park."
+      "On weekends, I enjoy going for a relaxing walk in the park."
     ]
   },
   {
     id: 'interview',
     title: 'Job Interview Practice',
     icon: '💼',
-    description: 'Practice answering common professional and interview questions.',
+    category: 'Career',
+    description: 'Practice answering common behavioral and professional interview questions.',
     starterPrompt: "Welcome to your mock interview! Please tell me a little bit about yourself and your professional background.",
     starterSuggestions: [
       "I have been working as a software developer for three years.",
@@ -59,10 +65,24 @@ export const PRACTICE_TOPICS: TopicInfo[] = [
     ]
   },
   {
+    id: 'business',
+    title: 'Business English',
+    icon: '📈',
+    category: 'Professional',
+    description: 'Master workplace conversations, meeting discussions, presentations, and emails.',
+    starterPrompt: "Let's practice business communication! How would you give an update to your team about a project deadline?",
+    starterSuggestions: [
+      "I would like to schedule a quick sync meeting tomorrow morning.",
+      "Our team completed the milestones ahead of schedule.",
+      "We need to allocate additional resources to meet our quarterly target."
+    ]
+  },
+  {
     id: 'travel',
     title: 'Travel & Vacations',
     icon: '✈️',
-    description: 'Describe favorite destinations, hotels, airports, and dream trips.',
+    category: 'Leisure',
+    description: 'Describe favorite destinations, airport situations, hotel check-ins, and dream trips.',
     starterPrompt: "I love exploring new places! What is the most memorable trip you have ever taken?",
     starterSuggestions: [
       "Last summer, I traveled to the mountains with my friends.",
@@ -72,9 +92,10 @@ export const PRACTICE_TOPICS: TopicInfo[] = [
   },
   {
     id: 'shopping',
-    title: 'Ordering Food & Shopping',
+    title: 'Shopping & Dining Out',
     icon: '🛍️',
-    description: 'Simulate ordering in restaurants, buying clothes, and asking for prices.',
+    category: 'Practical',
+    description: 'Simulate ordering at restaurants, buying clothes, and asking for recommendations.',
     starterPrompt: "Imagine we are at a nice coffee shop or restaurant! What would you like to order today?",
     starterSuggestions: [
       "Could I get an iced latte with oat milk, please?",
@@ -83,22 +104,11 @@ export const PRACTICE_TOPICS: TopicInfo[] = [
     ]
   },
   {
-    id: 'introduction',
-    title: 'Self Introduction',
-    icon: '👋',
-    description: 'Introduce yourself naturally to new people and colleagues.',
-    starterPrompt: "Nice to meet you! How would you introduce yourself if you met someone new at a social event?",
-    starterSuggestions: [
-      "Hello, my name is Alex and I am from California.",
-      "In my free time, I love playing guitar and reading books.",
-      "I am currently practicing English to travel around the world."
-    ]
-  },
-  {
     id: 'tech',
     title: 'Technology & AI',
     icon: '🚀',
-    description: 'Discuss gadgets, software, artificial intelligence, and future tech.',
+    category: 'Modern',
+    description: 'Discuss gadgets, software, artificial intelligence, and future innovations.',
     starterPrompt: "Technology is changing so fast! How do you use AI or smartphones in your daily life?",
     starterSuggestions: [
       "I use AI tools to help me write emails and brainstorm ideas.",
@@ -107,17 +117,28 @@ export const PRACTICE_TOPICS: TopicInfo[] = [
     ]
   },
   {
-    id: 'family',
-    title: 'Friends & Family',
-    icon: '👨‍👩‍👧‍👦',
-    description: 'Talk about relationships, favorite memories, and family traditions.',
-    starterPrompt: "Tell me about your family or a close friend who inspires you!",
+    id: 'hobbies',
+    title: 'Hobbies & Free Time',
+    icon: '🎨',
+    category: 'Personal',
+    description: 'Discuss your favorite creative passions, sports, music, books, and relaxation.',
+    starterPrompt: "What do you like to do when you have free time on the weekend?",
     starterSuggestions: [
-      "My best friend and I have known each other since college.",
-      "We usually celebrate holidays together with a big family dinner.",
-      "My parents taught me the value of hard work and honesty."
+      "In my free time, I really enjoy reading non-fiction books and playing music.",
+      "I have recently started learning photography as a creative hobby.",
+      "Playing football with my friends helps me stay fit and active."
     ]
   }
 ];
 
+export const SUGGESTED_REPLIES = [
+  "Tell me more about that",
+  "Ask me a question",
+  "What do you think?",
+  "Let's practice another example",
+  "How can I say this better?"
+];
+
 export const PRACTICE_GOALS = [5, 10, 15, 30] as const;
+
+export const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];

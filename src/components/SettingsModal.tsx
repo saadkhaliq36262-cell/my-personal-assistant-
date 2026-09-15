@@ -71,19 +71,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fadeIn">
+      <div className="relative w-full max-w-lg bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/50">
-          <div className="flex items-center space-x-2">
-            <Sparkles className="w-5 h-5 text-indigo-400" />
-            <h3 className="text-base sm:text-lg font-bold text-white">
-              Coach & Audio Settings
-            </h3>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/70">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">
+                Coach & Audio Settings
+              </h3>
+              <p className="text-xs text-slate-500">Configure your personal practice preferences</p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -92,42 +97,42 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Modal Body */}
         <div className="p-6 space-y-6 overflow-y-auto flex-1 text-sm">
           {/* 1. Gemini API Key Setting */}
-          <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 space-y-2.5">
+          <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-200/80 space-y-2.5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-indigo-200 font-semibold text-xs sm:text-sm">
-                <Key className="w-4 h-4 text-indigo-400" />
+              <div className="flex items-center gap-2 text-indigo-900 font-bold text-xs sm:text-sm">
+                <Key className="w-4 h-4 text-indigo-600" />
                 <span>Gemini API Key</span>
               </div>
               {savedBadge && (
-                <span className="inline-flex items-center space-x-1 text-[11px] text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/40">
+                <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full font-semibold">
                   <Check className="w-3 h-3" />
                   <span>Saved!</span>
                 </span>
               )}
             </div>
-            <p className="text-xs text-indigo-300/80">
-              Your API key is saved securely in your browser&apos;s local memory and never exposed to others.
+            <p className="text-xs text-indigo-700/80 leading-relaxed">
+              Your API key is saved safely in your browser&apos;s local storage and used directly for your AI coaching sessions.
             </p>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2">
               <div className="relative flex-1">
                 <input
                   type={showKey ? 'text' : 'password'}
                   value={tempKey}
                   onChange={(e) => setTempKey(e.target.value)}
-                  placeholder="Paste your Gemini API key here..."
-                  className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-100 pr-10 focus:outline-none focus:border-indigo-500"
+                  placeholder="Enter your Gemini API key..."
+                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 <button
                   type="button"
                   onClick={() => setShowKey(!showKey)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
                   {showKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
               </div>
               <button
                 onClick={handleSaveKey}
-                className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition-colors"
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition-colors"
               >
                 Save
               </button>
@@ -136,22 +141,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* 2. Speech Speed */}
           <div>
-            <div className="flex items-center space-x-2 text-slate-200 font-semibold mb-2">
-              <Gauge className="w-4 h-4 text-indigo-400" />
-              <span>Voice Speech Speed</span>
+            <div className="flex items-center gap-2 text-slate-900 font-bold mb-1">
+              <Gauge className="w-4 h-4 text-indigo-600" />
+              <span>Speaking Speed</span>
             </div>
-            <p className="text-xs text-slate-400 mb-3">
-              Adjust how fast the AI speaks to match your listening preference.
+            <p className="text-xs text-slate-500 mb-2.5">
+              Adjust how fast the AI speaks to match your listening fluency.
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {SPEED_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   onClick={() => onRateChange(opt.value)}
-                  className={`py-2 px-3 rounded-xl text-xs font-medium border transition-all ${
+                  className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
                     rate === opt.value
-                      ? 'bg-indigo-600 border-indigo-500 text-white shadow-md shadow-indigo-600/30'
-                      : 'bg-slate-950/50 border-slate-800 text-slate-300 hover:bg-slate-800 hover:border-slate-700'
+                      ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                   }`}
                 >
                   {opt.label}
@@ -162,12 +167,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* 3. Voice Selector */}
           <div>
-            <div className="flex items-center space-x-2 text-slate-200 font-semibold mb-2">
-              <Volume2 className="w-4 h-4 text-indigo-400" />
-              <span>Coach Voice</span>
+            <div className="flex items-center gap-2 text-slate-900 font-bold mb-1">
+              <Volume2 className="w-4 h-4 text-indigo-600" />
+              <span>Coach Voice & Accent</span>
             </div>
-            <p className="text-xs text-slate-400 mb-2">
-              Select your preferred English accent or browser voice.
+            <p className="text-xs text-slate-500 mb-2">
+              Select your preferred English accent or voice engine.
             </p>
             <select
               value={selectedVoice?.name || ''}
@@ -175,7 +180,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 const found = voices.find((v) => v.name === e.target.value);
                 if (found) onSelectVoice(found.voice);
               }}
-              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+              className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               {voices.length === 0 ? (
                 <option value="">Default Browser Voice</option>
@@ -190,23 +195,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {/* 4. Auto-play Voice Toggle */}
-          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800">
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
             <div>
-              <div className="font-semibold text-slate-200 text-xs sm:text-sm">
+              <div className="font-bold text-slate-900 text-xs sm:text-sm">
                 Auto-speak AI Responses
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Automatically read AI responses out loud upon arrival.
+              <p className="text-xs text-slate-500 mt-0.5">
+                Automatically speak the AI coach&apos;s replies out loud.
               </p>
             </div>
             <button
               onClick={() => onAutoSpeakChange(!autoSpeak)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                autoSpeak ? 'bg-indigo-600' : 'bg-slate-700'
+                autoSpeak ? 'bg-indigo-600' : 'bg-slate-300'
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition-transform ${
                   autoSpeak ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
@@ -215,19 +220,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* 5. Daily Speaking Goal */}
           <div>
-            <div className="flex items-center space-x-2 text-slate-200 font-semibold mb-2">
-              <Clock className="w-4 h-4 text-indigo-400" />
-              <span>Daily Speaking Goal</span>
+            <div className="flex items-center gap-2 text-slate-900 font-bold mb-1">
+              <Clock className="w-4 h-4 text-indigo-600" />
+              <span>Daily Practice Goal</span>
             </div>
             <div className="grid grid-cols-4 gap-2">
               {PRACTICE_GOALS.map((mins) => (
                 <button
                   key={mins}
                   onClick={() => onGoalChange(mins)}
-                  className={`py-2 px-3 rounded-xl text-xs font-medium border transition-all ${
+                  className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
                     goalMinutes === mins
-                      ? 'bg-indigo-600 border-indigo-500 text-white shadow-md'
-                      : 'bg-slate-950/50 border-slate-800 text-slate-300 hover:bg-slate-800'
+                      ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                   }`}
                 >
                   {mins} min
@@ -237,40 +242,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {/* 6. Clear History */}
-          <div className="pt-2 border-t border-slate-800">
+          <div className="pt-2 border-t border-slate-100">
             <button
               onClick={() => {
-                if (confirm('Are you sure you want to clear your current conversation history?')) {
+                if (confirm('Are you sure you want to clear your current conversation?')) {
                   onClearHistory();
                   onClose();
                 }
               }}
-              className="w-full flex items-center justify-center space-x-2 p-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-medium transition-colors"
+              className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition-colors"
             >
               <Trash2 className="w-4 h-4" />
-              <span>Clear Current Conversation</span>
+              <span>Reset Current Conversation</span>
             </button>
           </div>
 
-          {/* 7. Help / Tips */}
-          <div className="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-500/20 text-xs text-indigo-200/90 space-y-1.5">
-            <div className="flex items-center space-x-1.5 font-semibold text-indigo-300">
-              <HelpCircle className="w-3.5 h-3.5" />
-              <span>Microphone & Browser Tips</span>
+          {/* 7. Help & Tips */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1.5">
+            <div className="flex items-center gap-1.5 font-bold text-slate-800">
+              <HelpCircle className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Tips for Best Experience</span>
             </div>
-            <p>• Best supported in Chrome, Edge, and Android Chrome browsers.</p>
-            <p>• Make sure microphone permissions are allowed when prompted.</p>
-            <p>• Tap the keyboard icon anytime if you prefer typing.</p>
+            <p>• Works seamlessly in Google Chrome, Edge, Safari, and Android browsers.</p>
+            <p>• Make sure microphone permissions are granted in your browser address bar.</p>
+            <p>• Review what you spoke before pressing Send to verify accuracy.</p>
           </div>
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3 border-t border-slate-800 bg-slate-950/50 flex justify-end">
+        <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 flex justify-end">
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-colors"
+            className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors shadow-sm"
           >
-            Done
+            Close Settings
           </button>
         </div>
       </div>
