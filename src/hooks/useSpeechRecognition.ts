@@ -8,6 +8,47 @@ interface UseSpeechRecognitionOptions {
   lang?: string;
 }
 
+// Clean duplicate speech echoes common in mobile speech engines
+function deduplicateSpeech(text: string): string {
+  if (!text) return '';
+  const trimmed = text.replace(/\s+/g, ' ').trim();
+
+  // Check if entire text is repeated (e.g. "I want to go I want to go")
+  const words = trimmed.split(' ');
+  if (words.length >= 2 && words.length % 2 === 0) {
+    const mid = words.length / 2;
+    const left = words.slice(0, mid).join(' ').toLowerCase();
+    const right = words.slice(mid).join(' ').toLowerCase();
+    if (left === right) {
+      return words.slice(0, mid).join(' ');
+    }
+  }
+
+  // Check if phrase is repeated 3 or 4 times (e.g., "hello hello hello")
+  if (words.length >= 3 && words.length % 3 === 0) {
+    const chunk = words.length / 3;
+    const p1 = words.slice(0, chunk).join(' ').toLowerCase();
+    const p2 = words.slice(chunk, chunk * 2).join(' ').toLowerCase();
+    const p3 = words.slice(chunk * 2).join(' ').toLowerCase();
+    if (p1 === p2 && p2 === p3) {
+      return words.slice(0, chunk).join(' ');
+    }
+  }
+
+  // Filter out adjacent duplicate words (e.g., "Yesterday Yesterday I I go")
+  const cleanWords: string[] = [];
+  for (let i = 0; i < words.length; i++) {
+    const current = words[i];
+    const prev = cleanWords[cleanWords.length - 1];
+    if (prev && prev.toLowerCase() === current.toLowerCase() && current.length > 1) {
+      continue;
+    }
+    cleanWords.push(current);
+  }
+
+  return cleanWords.join(' ');
+}
+
 export function useSpeechRecognition({
   onTranscriptChange,
   onError,
@@ -25,13 +66,12 @@ export function useSpeechRecognition({
   const onErrorRef = useRef(onError);
   const recordedTextRef = useRef('');
 
-  // Keep callback refs fresh without triggering effect re-runs
   useEffect(() => {
     onTranscriptChangeRef.current = onTranscriptChange;
     onErrorRef.current = onError;
   }, [onTranscriptChange, onError]);
 
-  // Initialize Speech Recognition once
+  // Initialize Speech Recognition
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -45,8 +85,13 @@ export function useSpeechRecognition({
     }
 
     try {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
+
       const recognition = new SpeechRecognition();
-      recognition.continuous = true;
+      // On mobile devices, continuous = false prevents Android Chrome speech duplication loops
+      recognition.continuous = !isMobile;
       recognition.interimResults = true;
       recognition.lang = lang;
       recognition.maxAlternatives = 1;
@@ -58,36 +103,45 @@ export function useSpeechRecognition({
       };
 
       recognition.onresult = (event: any) => {
-        let currentInterim = '';
         let currentFinal = '';
+        let currentInterim = '';
 
         for (let i = 0; i < event.results.length; ++i) {
           const res = event.results[i];
+          const text = res[0]?.transcript?.trim() || '';
           if (res.isFinal) {
-            currentFinal += (currentFinal ? ' ' : '') + res[0].transcript.trim();
+            currentFinal += (currentFinal ? ' ' : '') + text;
           } else {
-            currentInterim += (currentInterim ? ' ' : '') + res[0].transcript.trim();
+            currentInterim += (currentInterim ? ' ' : '') + text;
           }
         }
 
-        const fullCaptured = (currentFinal + ' ' + currentInterim).trim();
-        recordedTextRef.current = fullCaptured;
+        // Smart combination to avoid Android duplicate cumulative interim appending
+        let combined = '';
+        if (currentFinal && currentInterim) {
+          if (currentInterim.toLowerCase().startsWith(currentFinal.toLowerCase())) {
+            combined = currentInterim;
+          } else if (currentFinal.toLowerCase().endsWith(currentInterim.toLowerCase())) {
+            combined = currentFinal;
+          } else {
+            combined = `${currentFinal} ${currentInterim}`.trim();
+          }
+        } else {
+          combined = (currentFinal || currentInterim).trim();
+        }
+
+        const cleaned = deduplicateSpeech(combined);
+        recordedTextRef.current = cleaned;
         setTranscript(currentFinal);
         setInterimTranscript(currentInterim);
 
-        if (fullCaptured && onTranscriptChangeRef.current) {
-          onTranscriptChangeRef.current(fullCaptured);
+        if (cleaned && onTranscriptChangeRef.current) {
+          onTranscriptChangeRef.current(cleaned);
         }
       };
 
       recognition.onerror = (event: any) => {
-        // 'aborted' is a normal event when stopping speech recognition
-        if (event.error === 'aborted') {
-          return;
-        }
-
-        // 'no-speech' is non-fatal; user might just be pausing before speaking
-        if (event.error === 'no-speech') {
+        if (event.error === 'aborted' || event.error === 'no-speech') {
           return;
         }
 
@@ -119,7 +173,6 @@ export function useSpeechRecognition({
         isListeningRef.current = false;
         setIsListening(false);
 
-        // Keep whatever speech was transcribed so user can review and edit it
         const finalText = recordedTextRef.current.trim();
         if (finalText && onTranscriptChangeRef.current) {
           onTranscriptChangeRef.current(finalText);
@@ -150,7 +203,7 @@ export function useSpeechRecognition({
     setInterimTranscript('');
 
     if (!recognitionRef.current) {
-      setError('Speech recognition is not supported in this browser. You can type using the keyboard below.');
+      setError('Speech recognition is not supported in this browser. You can type your sentence in the box below.');
       return;
     }
 
