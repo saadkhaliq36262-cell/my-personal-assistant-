@@ -290,10 +290,20 @@ export const StorageService = {
     }
   },
 
+  renameConversation(id: string, newTitle: string): ConversationSession[] {
+    const existing = this.getConversations();
+    const cleanTitle = newTitle.trim() || 'New Conversation';
+    const updated = existing.map((c) =>
+      c.id === id ? { ...c, title: cleanTitle, updatedAt: Date.now() } : c
+    );
+    this.saveConversations(updated);
+    return updated;
+  },
+
   generateTitle(topic: PracticeTopic, firstMessage?: string): string {
     const TOPIC_TITLES: Record<string, string> = {
       free: 'Free Conversation',
-      daily: 'Daily Life Practice',
+      daily: 'Daily English Practice',
       interview: 'Job Interview Practice',
       business: 'Business English',
       travel: 'Travel Conversation',
@@ -302,23 +312,37 @@ export const StorageService = {
       hobbies: 'Hobbies & Free Time',
     };
 
-    if (firstMessage && firstMessage.trim().length > 0) {
-      // Clean string: remove outer quotes, trim
-      const cleaned = firstMessage
-        .replace(/^["'“”]+|["'“”]+$/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
+    if (!firstMessage || firstMessage.trim().length === 0) {
+      return TOPIC_TITLES[topic] || 'New Conversation';
+    }
 
-      if (cleaned.length > 0) {
-        // Capitalize first letter
-        const capitalized = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-        if (capitalized.length <= 30) {
-          return capitalized;
-        }
-        return capitalized.slice(0, 28).trim() + '...';
+    const lower = firstMessage.toLowerCase();
+
+    // Check for specific destinations or topics in text
+    if (lower.includes('dubai')) return 'Dubai Travel Conversation';
+    if (lower.includes('interview') || lower.includes('resume')) return 'Job Interview Practice';
+    if (lower.includes('meeting') || lower.includes('business') || lower.includes('client')) return 'Business English';
+    if (lower.includes('hotel') || lower.includes('airport') || lower.includes('flight') || lower.includes('trip') || lower.includes('vacation')) return 'Travel Conversation';
+    if (lower.includes('restaurant') || lower.includes('coffee') || lower.includes('order') || lower.includes('shopping')) return 'Dining & Shopping';
+    if (lower.includes('routine') || lower.includes('morning') || lower.includes('weekend')) return 'Daily English Practice';
+
+    // Extract first 3 to 4 words from the user's sentence
+    const cleanWords = firstMessage
+      .replace(/[^\w\s]/g, '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    if (cleanWords.length >= 2) {
+      const titleWords = cleanWords.slice(0, 4).map((w, i) =>
+        i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w
+      );
+      const candidate = titleWords.join(' ');
+      if (candidate.length <= 28) {
+        return candidate;
       }
     }
 
-    return TOPIC_TITLES[topic] || 'English Practice';
+    return TOPIC_TITLES[topic] || 'New Conversation';
   },
 };

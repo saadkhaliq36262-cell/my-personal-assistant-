@@ -13,6 +13,7 @@ import { SessionSummaryModal } from '@/components/SessionSummaryModal';
 import { ProgressDashboard } from '@/components/ProgressDashboard';
 import { VocabularyNotebook } from '@/components/VocabularyNotebook';
 import { Footer } from '@/components/Footer';
+import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
 import { usePracticeTimer } from '@/hooks/usePracticeTimer';
@@ -202,25 +203,25 @@ export default function HomePage() {
 
   // Delete a previous conversation from the sidebar
   const handleDeleteConversation = useCallback(
-    (id: string, e: React.MouseEvent) => {
-      e.stopPropagation();
+    (id: string) => {
       const updated = StorageService.deleteConversation(id);
       setConversations(updated);
 
       if (activeConversationId === id) {
-        if (updated.length > 0) {
-          const next = updated[0];
-          setActiveConversationId(next.id);
-          setMessages(next.messages || []);
-          setTopic(next.topic || 'free');
-          setLevel(next.level || 'intermediate');
-          StorageService.setActiveConversationId(next.id);
-        } else {
-          handleNewChat();
-        }
+        // If the deleted conversation is currently open, automatically open a new empty conversation
+        handleNewChat();
       }
     },
     [activeConversationId, handleNewChat]
+  );
+
+  // Rename a conversation in the sidebar
+  const handleRenameConversation = useCallback(
+    (id: string, newTitle: string) => {
+      const updated = StorageService.renameConversation(id, newTitle);
+      setConversations(updated);
+    },
+    []
   );
 
   // Vocabulary handlers
@@ -533,6 +534,7 @@ export default function HomePage() {
               onSelectConversation={handleSelectConversation}
               onNewChat={() => handleNewChat()}
               onDeleteConversation={handleDeleteConversation}
+              onRenameConversation={handleRenameConversation}
               isOpenMobile={isSidebarOpenMobile}
               onCloseMobile={() => setIsSidebarOpenMobile(false)}
               onSelectTab={setActiveTab}
@@ -746,6 +748,9 @@ export default function HomePage() {
         }}
         onViewProgress={() => setActiveTab('progress')}
       />
+
+      {/* Floating WhatsApp Support Button */}
+      <WhatsAppButton />
     </div>
   );
 }
