@@ -15,11 +15,13 @@ import { ChatMessage } from '@/types';
 interface FeedbackCardProps {
   message: ChatMessage;
   onSaveWord: (word: string, meaning: string, example?: string) => void;
+  languageHelp?: boolean;
 }
 
 export const FeedbackCard: React.FC<FeedbackCardProps> = ({
   message,
   onSaveWord,
+  languageHelp = true,
 }) => {
   const [savedWords, setSavedWords] = useState<{ [word: string]: boolean }>({});
 
@@ -71,12 +73,22 @@ export const FeedbackCard: React.FC<FeedbackCardProps> = ({
 
         {/* Explanation */}
         {message.explanation && (
-          <div className="flex items-start space-x-2.5 text-slate-700">
-            <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-            <div>
-              <span className="font-bold text-slate-900">Explanation: </span>
-              <span className="leading-relaxed">{message.explanation}</span>
+          <div className="space-y-1.5">
+            <div className="flex items-start space-x-2.5 text-slate-700">
+              <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-slate-900">Explanation: </span>
+                <span className="leading-relaxed">{message.explanation}</span>
+              </div>
             </div>
+
+            {/* Roman Urdu Explanation when Language Help is ON */}
+            {languageHelp && message.explanationRomanUrdu && (
+              <div className="ml-6 p-2 rounded-xl bg-amber-50/80 border border-amber-200/70 text-xs text-amber-900 font-medium">
+                <span className="font-bold text-amber-800">Roman Urdu: </span>
+                <span>{message.explanationRomanUrdu}</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -109,6 +121,11 @@ export const FeedbackCard: React.FC<FeedbackCardProps> = ({
                     <div>
                       <span className="font-bold text-indigo-700">{v.word}</span>
                       <span className="text-slate-500 text-[11px] ml-1.5">— {v.meaning}</span>
+                      {languageHelp && v.romanUrdu && (
+                        <span className="text-emerald-700 text-[11px] font-medium ml-1">
+                          ({v.romanUrdu})
+                        </span>
+                      )}
                     </div>
                     <button
                       onClick={() => handleSave(v.word, v.meaning)}

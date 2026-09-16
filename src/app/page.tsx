@@ -48,6 +48,7 @@ export default function HomePage() {
   const [errorToast, setErrorToast] = useState<string | null>(null);
   const [activeSpeakingId, setActiveSpeakingId] = useState<string | null>(null);
   const [liveSpeechText, setLiveSpeechText] = useState<string>('');
+  const [languageHelp, setLanguageHelp] = useState<boolean>(true);
 
   // ChatGPT / Gemini Style Conversation History State
   const [conversations, setConversations] = useState<ConversationSession[]>([]);
@@ -139,6 +140,7 @@ export default function HomePage() {
         if (parsed.topic) setTopic(parsed.topic);
         if (typeof parsed.autoSpeak === 'boolean') setAutoSpeak(parsed.autoSpeak);
         if (typeof parsed.rate === 'number') setRate(parsed.rate);
+        if (typeof parsed.languageHelp === 'boolean') setLanguageHelp(parsed.languageHelp);
       }
 
       const savedKey = localStorage.getItem(STORAGE_KEY_API_KEY);
@@ -155,12 +157,12 @@ export default function HomePage() {
     try {
       localStorage.setItem(
         STORAGE_KEY_SETTINGS,
-        JSON.stringify({ level, topic, autoSpeak, rate })
+        JSON.stringify({ level, topic, autoSpeak, rate, languageHelp })
       );
     } catch {
       // ignore
     }
-  }, [level, topic, autoSpeak, rate]);
+  }, [level, topic, autoSpeak, rate, languageHelp]);
 
   // Start a fresh new chat session
   const handleNewChat = useCallback(
@@ -311,6 +313,7 @@ export default function HomePage() {
             topic,
             history: historyContext,
             apiKey: apiKey || undefined,
+            languageHelp,
           }),
         });
 
@@ -329,9 +332,14 @@ export default function HomePage() {
                 ...m,
                 correctedText: coachData.corrected,
                 explanation: coachData.explanation,
+                explanationRomanUrdu: coachData.explanationRomanUrdu,
                 naturalVersion: coachData.naturalVersion,
                 aiResponse: coachData.aiResponse,
                 followUpQuestion: coachData.followUpQuestion,
+                questionRomanUrdu: coachData.questionRomanUrdu,
+                hintEnglish: coachData.hintEnglish,
+                hintRomanUrdu: coachData.hintRomanUrdu,
+                simpleEnglishQuestion: coachData.simpleEnglishQuestion,
                 hasMistakes: coachData.hasMistakes,
                 vocabWords: coachData.vocabWords,
               }
@@ -391,6 +399,7 @@ export default function HomePage() {
       scrollToBottom,
       speak,
       topic,
+      languageHelp,
     ]
   );
 
@@ -502,6 +511,8 @@ export default function HomePage() {
         onEndSession={handleEndSession}
         messagesCount={messages.length}
         onToggleSidebar={() => setIsSidebarOpenMobile((prev) => !prev)}
+        languageHelp={languageHelp}
+        onToggleLanguageHelp={() => setLanguageHelp((prev) => !prev)}
       />
 
       {/* Error Toast Notification */}
@@ -620,6 +631,7 @@ export default function HomePage() {
                     isSpeaking={isSpeaking}
                     activeSpeakingId={activeSpeakingId}
                     onSaveWord={handleSaveWord}
+                    languageHelp={languageHelp}
                   />
                 </div>
               )}
@@ -731,6 +743,8 @@ export default function HomePage() {
         onClearHistory={handleClearChat}
         apiKey={apiKey}
         onApiKeyChange={handleApiKeyChange}
+        languageHelp={languageHelp}
+        onLanguageHelpChange={setLanguageHelp}
       />
 
       {/* Session Summary Modal */}

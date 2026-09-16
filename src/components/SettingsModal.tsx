@@ -33,6 +33,8 @@ interface SettingsModalProps {
   onClearHistory: () => void;
   apiKey: string;
   onApiKeyChange: (key: string) => void;
+  languageHelp: boolean;
+  onLanguageHelpChange: (enabled: boolean) => void;
 }
 
 const SPEED_OPTIONS = [
@@ -57,6 +59,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClearHistory,
   apiKey,
   onApiKeyChange,
+  languageHelp,
+  onLanguageHelpChange,
 }) => {
   const [showKey, setShowKey] = useState(false);
   const [tempKey, setTempKey] = useState(apiKey);
@@ -192,6 +196,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 ))
               )}
             </select>
+          </div>
+
+          {/* Language Help (Roman Urdu Support) Toggle */}
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200">
+            <div>
+              <div className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+                <span>🌐 Language Help (Roman Urdu)</span>
+                <span className="text-[10px] bg-emerald-600 text-white font-bold px-1.5 py-0.5 rounded">
+                  Active Learning Aid
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                Provide simple Roman Urdu meanings for questions, hints, and grammar explanations.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onLanguageHelpChange(!languageHelp)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ml-3 ${
+                languageHelp ? 'bg-emerald-600' : 'bg-slate-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition-transform ${
+                  languageHelp ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
           </div>
 
           {/* 4. Auto-play Voice Toggle */}

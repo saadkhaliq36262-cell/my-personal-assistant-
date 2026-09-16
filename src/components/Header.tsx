@@ -29,6 +29,8 @@ interface HeaderProps {
   onEndSession: () => void;
   messagesCount: number;
   onToggleSidebar?: () => void;
+  languageHelp: boolean;
+  onToggleLanguageHelp: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -46,6 +48,8 @@ export const Header: React.FC<HeaderProps> = ({
   onEndSession,
   messagesCount,
   onToggleSidebar,
+  languageHelp,
+  onToggleLanguageHelp,
 }) => {
   const [isLevelMenuOpen, setIsLevelMenuOpen] = useState(false);
   const [isGoalMenuOpen, setIsGoalMenuOpen] = useState(false);
@@ -122,6 +126,34 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Action Area */}
         <div className="flex items-center gap-2">
+          {/* Language Help (Roman Urdu) Mode Toggle */}
+          <button
+            type="button"
+            onClick={onToggleLanguageHelp}
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+              languageHelp
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-2xs'
+                : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-700'
+            }`}
+            title={
+              languageHelp
+                ? 'Language Help: ON (Simple Roman Urdu meanings included for questions)'
+                : 'Language Help: OFF (100% English immersion)'
+            }
+          >
+            <span className="text-sm">🌐</span>
+            <span className="hidden sm:inline">Urdu Help:</span>
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded font-black ${
+                languageHelp
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-slate-200 text-slate-600'
+              }`}
+            >
+              {languageHelp ? 'ON' : 'OFF'}
+            </span>
+          </button>
+
           {/* Practice Session Timer */}
           <div className="relative">
             <button

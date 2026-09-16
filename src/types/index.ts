@@ -23,13 +23,18 @@ export interface ChatMessage {
   originalText: string;
   correctedText?: string;
   explanation?: string;
+  explanationRomanUrdu?: string;
   naturalVersion?: string;
   aiResponse?: string;
   followUpQuestion?: string;
+  questionRomanUrdu?: string;
+  hintEnglish?: string;
+  hintRomanUrdu?: string;
+  simpleEnglishQuestion?: string;
   hasMistakes?: boolean;
   topic?: PracticeTopic;
   level?: EnglishLevel;
-  vocabWords?: { word: string; meaning: string }[];
+  vocabWords?: { word: string; meaning: string; romanUrdu?: string }[];
 }
 
 export interface CoachApiResponse {
@@ -37,11 +42,16 @@ export interface CoachApiResponse {
   original: string;
   corrected: string;
   explanation: string;
+  explanationRomanUrdu?: string;
   naturalVersion: string;
   aiResponse: string;
   followUpQuestion: string;
+  questionRomanUrdu?: string;
+  hintEnglish?: string;
+  hintRomanUrdu?: string;
+  simpleEnglishQuestion?: string;
   encouragementTip?: string;
-  vocabWords?: { word: string; meaning: string }[];
+  vocabWords?: { word: string; meaning: string; romanUrdu?: string }[];
 }
 
 export interface TopicInfo {
