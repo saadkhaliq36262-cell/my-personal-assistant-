@@ -82,3 +82,13 @@ export interface ProgressStats {
   totalConversations: number;
   weeklyActivity: { [day: string]: number }; // e.g. { 'Mon': 10, 'Tue': 15 }
 }
+
+export interface ConversationSession {
+  id: string;
+  title: string;
+  topic: PracticeTopic;
+  level: EnglishLevel;
+  messages: ChatMessage[];
+  createdAt: number;
+  updatedAt: number;
+}

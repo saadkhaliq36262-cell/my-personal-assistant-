@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Header } from '@/components/Header';
+import { Sidebar } from '@/components/Sidebar';
 import { HeroBanner } from '@/components/HeroBanner';
 import { LevelSelector } from '@/components/LevelSelector';
 import { TopicGrid } from '@/components/TopicGrid';
@@ -27,10 +28,10 @@ import {
   VocabItem,
   ProgressStats,
   PracticeSessionSummary,
+  ConversationSession,
 } from '@/types';
-import { AlertCircle, X, MessageSquare, RotateCcw } from 'lucide-react';
+import { AlertCircle, X } from 'lucide-react';
 
-const STORAGE_KEY_MESSAGES = 'my_english_coach_messages_v2';
 const STORAGE_KEY_SETTINGS = 'my_english_coach_settings_v2';
 const STORAGE_KEY_API_KEY = 'my_english_coach_api_key_v1';
 
@@ -46,6 +47,11 @@ export default function HomePage() {
   const [errorToast, setErrorToast] = useState<string | null>(null);
   const [activeSpeakingId, setActiveSpeakingId] = useState<string | null>(null);
   const [liveSpeechText, setLiveSpeechText] = useState<string>('');
+
+  // ChatGPT / Gemini Style Conversation History State
+  const [conversations, setConversations] = useState<ConversationSession[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState<boolean>(false);
 
   // Vocabulary & Progress Stats state
   const [vocabulary, setVocabulary] = useState<VocabItem[]>([]);
@@ -98,10 +104,31 @@ export default function HomePage() {
       setProgressStats(StorageService.getProgressStats());
       setSessionSummaries(StorageService.getSessionSummaries());
 
-      const savedMessages = localStorage.getItem(STORAGE_KEY_MESSAGES);
-      if (savedMessages) {
-        const parsed = JSON.parse(savedMessages);
-        if (Array.isArray(parsed)) setMessages(parsed);
+      const loadedConversations = StorageService.getConversations();
+      setConversations(loadedConversations);
+
+      const savedActiveId = StorageService.getActiveConversationId();
+      if (savedActiveId && loadedConversations.some((c) => c.id === savedActiveId)) {
+        const found = loadedConversations.find((c) => c.id === savedActiveId);
+        if (found) {
+          setActiveConversationId(found.id);
+          setMessages(found.messages || []);
+          setTopic(found.topic || 'free');
+          setLevel(found.level || 'intermediate');
+        }
+      } else if (loadedConversations.length > 0) {
+        const first = loadedConversations[0];
+        setActiveConversationId(first.id);
+        setMessages(first.messages || []);
+        setTopic(first.topic || 'free');
+        setLevel(first.level || 'intermediate');
+        StorageService.setActiveConversationId(first.id);
+      } else {
+        // Initialize with a fresh blank conversation ID
+        const newId = `conv_${Date.now()}`;
+        setActiveConversationId(newId);
+        setMessages([]);
+        StorageService.setActiveConversationId(newId);
       }
 
       const savedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
@@ -122,15 +149,6 @@ export default function HomePage() {
     }
   }, [setAutoSpeak, setRate]);
 
-  // Persist messages to LocalStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_MESSAGES, JSON.stringify(messages));
-    } catch {
-      // ignore storage quota errors
-    }
-  }, [messages]);
-
   // Persist settings
   useEffect(() => {
     try {
@@ -142,6 +160,68 @@ export default function HomePage() {
       // ignore
     }
   }, [level, topic, autoSpeak, rate]);
+
+  // Start a fresh new chat session
+  const handleNewChat = useCallback(
+    (initialTopic?: PracticeTopic) => {
+      const newId = `conv_${Date.now()}`;
+      const targetTopic = initialTopic || topic || 'free';
+      const targetLevel = level || 'intermediate';
+
+      setActiveConversationId(newId);
+      setMessages([]);
+      setTopic(targetTopic);
+      setLevel(targetLevel);
+      setLiveSpeechText('');
+      cancelSpeech();
+      setActiveSpeakingId(null);
+      StorageService.setActiveConversationId(newId);
+      resetTimer();
+    },
+    [cancelSpeech, level, resetTimer, topic]
+  );
+
+  // Switch to a previous conversation from the sidebar
+  const handleSelectConversation = useCallback(
+    (id: string) => {
+      const found = conversations.find((c) => c.id === id);
+      if (!found) return;
+
+      setActiveConversationId(found.id);
+      setMessages(found.messages || []);
+      setTopic(found.topic || 'free');
+      setLevel(found.level || 'intermediate');
+      setLiveSpeechText('');
+      cancelSpeech();
+      setActiveSpeakingId(null);
+      StorageService.setActiveConversationId(found.id);
+      scrollToBottom();
+    },
+    [cancelSpeech, conversations, scrollToBottom]
+  );
+
+  // Delete a previous conversation from the sidebar
+  const handleDeleteConversation = useCallback(
+    (id: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      const updated = StorageService.deleteConversation(id);
+      setConversations(updated);
+
+      if (activeConversationId === id) {
+        if (updated.length > 0) {
+          const next = updated[0];
+          setActiveConversationId(next.id);
+          setMessages(next.messages || []);
+          setTopic(next.topic || 'free');
+          setLevel(next.level || 'intermediate');
+          StorageService.setActiveConversationId(next.id);
+        } else {
+          handleNewChat();
+        }
+      }
+    },
+    [activeConversationId, handleNewChat]
+  );
 
   // Vocabulary handlers
   const handleSaveWord = useCallback(
@@ -162,13 +242,18 @@ export default function HomePage() {
     setVocabulary(updated);
   }, []);
 
-  // Send message to backend Gemini API
+  // Send message to backend Gemini API and update conversation history
   const handleSendMessage = useCallback(
     async (text: string) => {
       if (!text || text.trim().length === 0 || isThinking) return;
 
       const trimmedText = text.trim();
       const messageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const convId = activeConversationId || `conv_${Date.now()}`;
+      if (!activeConversationId) {
+        setActiveConversationId(convId);
+        StorageService.setActiveConversationId(convId);
+      }
 
       const newMsg: ChatMessage = {
         id: messageId,
@@ -179,15 +264,36 @@ export default function HomePage() {
         level,
       };
 
-      setMessages((prev) => [...prev, newMsg]);
+      const updatedMessages = [...messages, newMsg];
+      setMessages(updatedMessages);
       setIsThinking(true);
       setErrorToast(null);
       setLiveSpeechText('');
       scrollToBottom();
 
+      // Find or create current conversation session
+      const existingConv = conversations.find((c) => c.id === convId);
+      const convTitle =
+        existingConv?.title && existingConv.title !== 'English Practice'
+          ? existingConv.title
+          : StorageService.generateTitle(topic, trimmedText);
+
+      const updatedSession: ConversationSession = {
+        id: convId,
+        title: convTitle,
+        topic,
+        level,
+        messages: updatedMessages,
+        createdAt: existingConv?.createdAt || Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      const newConversations = StorageService.saveConversation(updatedSession);
+      setConversations(newConversations);
+
       try {
         // Build recent history for context
-        const historyContext = messages.slice(-6).flatMap((m) => [
+        const historyContext = updatedMessages.slice(-6).flatMap((m) => [
           { role: 'user', content: m.originalText },
           ...(m.aiResponse ? [{ role: 'assistant', content: m.aiResponse }] : []),
         ]);
@@ -216,24 +322,33 @@ export default function HomePage() {
         const coachData = data as CoachApiResponse;
 
         // Update message with coach evaluation
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === messageId
-              ? {
-                  ...m,
-                  correctedText: coachData.corrected,
-                  explanation: coachData.explanation,
-                  naturalVersion: coachData.naturalVersion,
-                  aiResponse: coachData.aiResponse,
-                  followUpQuestion: coachData.followUpQuestion,
-                  hasMistakes: coachData.hasMistakes,
-                  vocabWords: coachData.vocabWords,
-                }
-              : m
-          )
+        const finalMessages = updatedMessages.map((m) =>
+          m.id === messageId
+            ? {
+                ...m,
+                correctedText: coachData.corrected,
+                explanation: coachData.explanation,
+                naturalVersion: coachData.naturalVersion,
+                aiResponse: coachData.aiResponse,
+                followUpQuestion: coachData.followUpQuestion,
+                hasMistakes: coachData.hasMistakes,
+                vocabWords: coachData.vocabWords,
+              }
+            : m
         );
 
-        // If AI recommended vocabulary words, auto-save to notebook if relevant
+        setMessages(finalMessages);
+
+        // Update conversation session in storage
+        const finishedSession: ConversationSession = {
+          ...updatedSession,
+          messages: finalMessages,
+          updatedAt: Date.now(),
+        };
+        const syncedConversations = StorageService.saveConversation(finishedSession);
+        setConversations(syncedConversations);
+
+        // If AI recommended vocabulary words, auto-save to notebook
         if (coachData.vocabWords && coachData.vocabWords.length > 0) {
           coachData.vocabWords.forEach((v) => {
             if (v.word && v.meaning) {
@@ -264,7 +379,18 @@ export default function HomePage() {
         setIsThinking(false);
       }
     },
-    [apiKey, autoSpeak, isThinking, level, messages, scrollToBottom, speak, topic]
+    [
+      activeConversationId,
+      apiKey,
+      autoSpeak,
+      conversations,
+      isThinking,
+      level,
+      messages,
+      scrollToBottom,
+      speak,
+      topic,
+    ]
   );
 
   // Speech Recognition Hook (Only populates text for review; does not auto-send)
@@ -341,15 +467,7 @@ export default function HomePage() {
   };
 
   const handleClearChat = () => {
-    setMessages([]);
-    cancelSpeech();
-    setActiveSpeakingId(null);
-    setLiveSpeechText('');
-    try {
-      localStorage.removeItem(STORAGE_KEY_MESSAGES);
-    } catch {
-      // ignore
-    }
+    handleNewChat();
   };
 
   const handleSpeakSingleMessage = (text: string, messageId: string) => {
@@ -366,7 +484,7 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-600 selection:text-white">
-      {/* Top Header */}
+      {/* Top Header with Sidebar Toggle for mobile */}
       <Header
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -382,6 +500,7 @@ export default function HomePage() {
         onGoalChange={changeGoal}
         onEndSession={handleEndSession}
         messagesCount={messages.length}
+        onToggleSidebar={() => setIsSidebarOpenMobile((prev) => !prev)}
       />
 
       {/* Error Toast Notification */}
@@ -402,91 +521,114 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Main Content Area Based on Active Nav Tab */}
-      <main className="flex-1 w-full max-w-5xl mx-auto px-3 sm:px-6 py-6 pb-48">
-        {/* 1. PRACTICE TAB */}
+      {/* Main Content Area */}
+      <main className="flex-1 w-full">
+        {/* 1. PRACTICE TAB: ChatGPT / Gemini Two-Column Layout (Sidebar + Active Chat) */}
         {activeTab === 'practice' && (
-          <div className="space-y-6">
-            {messages.length === 0 ? (
-              <>
-                {/* Hero Introduction Banner */}
-                <HeroBanner
-                  onStartPractice={() => startListening()}
-                  level={level}
-                  topic={topic}
-                  onOpenTopics={() => setActiveTab('topics')}
-                />
+          <div className="flex w-full min-h-[calc(100vh-61px)]">
+            {/* Left Sidebar (Desktop Docked + Mobile Slide-over Drawer) */}
+            <Sidebar
+              conversations={conversations}
+              activeConversationId={activeConversationId}
+              onSelectConversation={handleSelectConversation}
+              onNewChat={() => handleNewChat()}
+              onDeleteConversation={handleDeleteConversation}
+              isOpenMobile={isSidebarOpenMobile}
+              onCloseMobile={() => setIsSidebarOpenMobile(false)}
+              onSelectTab={setActiveTab}
+            />
 
-                {/* Level Selection Cards */}
-                <LevelSelector currentLevel={level} onSelectLevel={setLevel} />
+            {/* Right Main Chat & Practice Area */}
+            <div className="flex-1 min-w-0 flex flex-col justify-between max-w-4xl mx-auto px-3 sm:px-6 py-6 pb-48">
+              {messages.length === 0 ? (
+                <div className="space-y-6">
+                  {/* Hero Introduction Banner */}
+                  <HeroBanner
+                    onStartPractice={() => startListening()}
+                    level={level}
+                    topic={topic}
+                    onOpenTopics={() => setActiveTab('topics')}
+                  />
 
-                {/* Topics Grid */}
-                <TopicGrid
-                  currentTopic={topic}
-                  onSelectTopic={(t) => setTopic(t)}
-                  onStartChat={(starter) => {
-                    if (starter) setLiveSpeechText(starter);
-                  }}
-                />
-              </>
-            ) : (
-              <>
-                {/* Active Session Info Bar */}
-                <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-2xl p-2 rounded-xl bg-indigo-50 border border-indigo-100">
-                      {currentTopicObj.icon}
-                    </span>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-sm font-bold text-slate-900">
-                          {currentTopicObj.title}
-                        </h2>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60 uppercase">
-                          {level}
-                        </span>
+                  {/* Level Selection Cards */}
+                  <LevelSelector currentLevel={level} onSelectLevel={setLevel} />
+
+                  {/* Topics Grid */}
+                  <TopicGrid
+                    currentTopic={topic}
+                    onSelectTopic={(t) => {
+                      setTopic(t);
+                    }}
+                    onStartChat={(starter) => {
+                      if (starter) setLiveSpeechText(starter);
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Active Session Info Bar */}
+                  <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-2xl p-2 rounded-xl bg-indigo-50 border border-indigo-100">
+                        {currentTopicObj.icon}
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-sm font-bold text-slate-900">
+                            {currentTopicObj.title}
+                          </h2>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60 uppercase">
+                            {level}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 line-clamp-1">
+                          {currentTopicObj.description}
+                        </p>
                       </div>
-                      <p className="text-xs text-slate-500 line-clamp-1">
-                        {currentTopicObj.description}
-                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => handleNewChat()}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/60 transition-colors"
+                      >
+                        + New Chat
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('topics')}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+                      >
+                        Change Topic
+                      </button>
+                      <button
+                        onClick={handleEndSession}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors"
+                      >
+                        End Session
+                      </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => setActiveTab('topics')}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
-                    >
-                      Change Topic
-                    </button>
-                    <button
-                      onClick={handleEndSession}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors"
-                    >
-                      End Session
-                    </button>
-                  </div>
+                  {/* Main Active Conversation View */}
+                  <ConversationView
+                    messages={messages}
+                    isThinking={isThinking}
+                    onSpeakText={handleSpeakSingleMessage}
+                    onStopSpeaking={handleStopSpeaking}
+                    isSpeaking={isSpeaking}
+                    activeSpeakingId={activeSpeakingId}
+                    onSaveWord={handleSaveWord}
+                  />
                 </div>
-
-                {/* Conversation View */}
-                <ConversationView
-                  messages={messages}
-                  isThinking={isThinking}
-                  onSpeakText={handleSpeakSingleMessage}
-                  onStopSpeaking={handleStopSpeaking}
-                  isSpeaking={isSpeaking}
-                  activeSpeakingId={activeSpeakingId}
-                  onSaveWord={handleSaveWord}
-                />
-              </>
-            )}
-            <div ref={chatBottomRef} />
+              )}
+              <div ref={chatBottomRef} />
+            </div>
           </div>
         )}
 
         {/* 2. TOPICS TAB */}
         {activeTab === 'topics' && (
-          <div className="space-y-6">
+          <div className="max-w-5xl mx-auto px-3 sm:px-6 py-6 space-y-6">
             <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-sm">
               <h2 className="text-xl font-bold text-slate-900 mb-1">
                 Explore Conversation Topics
@@ -500,6 +642,7 @@ export default function HomePage() {
               currentTopic={topic}
               onSelectTopic={(selectedTopic) => {
                 setTopic(selectedTopic);
+                handleNewChat(selectedTopic);
                 setActiveTab('practice');
               }}
               onStartChat={(starter) => {
@@ -512,32 +655,43 @@ export default function HomePage() {
 
         {/* 3. PROGRESS TAB */}
         {activeTab === 'progress' && (
-          <ProgressDashboard
-            stats={progressStats}
-            sessionSummaries={sessionSummaries}
-            savedWordsCount={vocabulary.length}
-            currentLevel={level}
-            onStartPractice={() => setActiveTab('practice')}
-            onSelectTopic={(t) => {
-              setTopic(t);
-              setActiveTab('practice');
-            }}
-          />
+          <div className="max-w-5xl mx-auto px-3 sm:px-6 py-6">
+            <ProgressDashboard
+              stats={progressStats}
+              sessionSummaries={sessionSummaries}
+              savedWordsCount={vocabulary.length}
+              currentLevel={level}
+              onStartPractice={() => {
+                handleNewChat();
+                setActiveTab('practice');
+              }}
+              onSelectTopic={(t) => {
+                setTopic(t);
+                handleNewChat(t);
+                setActiveTab('practice');
+              }}
+            />
+          </div>
         )}
 
         {/* 4. VOCABULARY TAB */}
         {activeTab === 'vocabulary' && (
-          <VocabularyNotebook
-            vocabulary={vocabulary}
-            onAddWord={(word, meaning, example, t) => {
-              const updated = StorageService.addWord(word, meaning, example, t);
-              setVocabulary(updated);
-            }}
-            onDeleteWord={handleDeleteWord}
-            onToggleMastered={handleToggleMastered}
-            onSpeakWord={(word) => speak(word)}
-            onStartPractice={() => setActiveTab('practice')}
-          />
+          <div className="max-w-5xl mx-auto px-3 sm:px-6 py-6">
+            <VocabularyNotebook
+              vocabulary={vocabulary}
+              onAddWord={(word, meaning, example, t) => {
+                const updated = StorageService.addWord(word, meaning, example, t);
+                setVocabulary(updated);
+              }}
+              onDeleteWord={handleDeleteWord}
+              onToggleMastered={handleToggleMastered}
+              onSpeakWord={(word) => speak(word)}
+              onStartPractice={() => {
+                handleNewChat();
+                setActiveTab('practice');
+              }}
+            />
+          </div>
         )}
       </main>
 
@@ -587,7 +741,7 @@ export default function HomePage() {
         durationMinutes={Math.max(1, Math.round(elapsedSeconds / 60))}
         correctionsCount={messages.filter((m) => m.hasMistakes).length}
         onStartNewSession={() => {
-          handleClearChat();
+          handleNewChat();
           setActiveTab('practice');
         }}
         onViewProgress={() => setActiveTab('progress')}

@@ -8,6 +8,7 @@ import {
   RotateCcw,
   CheckCircle2,
   ChevronDown,
+  PanelLeft,
 } from 'lucide-react';
 import { EnglishLevel, PracticeTopic, PracticeGoalMinutes, ActiveNavTab } from '@/types';
 import { ENGLISH_LEVELS, PRACTICE_GOALS } from '@/lib/constants';
@@ -27,6 +28,7 @@ interface HeaderProps {
   onGoalChange: (goal: PracticeGoalMinutes) => void;
   onEndSession: () => void;
   messagesCount: number;
+  onToggleSidebar?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -43,6 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
   onGoalChange,
   onEndSession,
   messagesCount,
+  onToggleSidebar,
 }) => {
   const [isLevelMenuOpen, setIsLevelMenuOpen] = useState(false);
   const [isGoalMenuOpen, setIsGoalMenuOpen] = useState(false);
@@ -58,9 +61,21 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80 transition-all">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
         {/* Brand & Logo */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {activeTab === 'practice' && onToggleSidebar && (
+            <button
+              type="button"
+              onClick={onToggleSidebar}
+              className="lg:hidden p-2 rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200 transition-colors"
+              title="Chat History"
+              aria-label="Open chat history"
+            >
+              <PanelLeft className="w-4 h-4 text-indigo-600" />
+            </button>
+          )}
+
           <button
             onClick={() => onTabChange('practice')}
             className="flex items-center gap-2.5 text-left group"

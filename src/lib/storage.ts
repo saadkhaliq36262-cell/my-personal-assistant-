@@ -1,4 +1,11 @@
-import { VocabItem, ProgressStats, PracticeSessionSummary, EnglishLevel, PracticeTopic } from '@/types';
+import {
+  VocabItem,
+  ProgressStats,
+  PracticeSessionSummary,
+  EnglishLevel,
+  PracticeTopic,
+  ConversationSession,
+} from '@/types';
 
 const STORAGE_KEYS = {
   MESSAGES: 'my_english_coach_messages_v2',
@@ -7,6 +14,8 @@ const STORAGE_KEYS = {
   VOCABULARY: 'my_english_coach_vocabulary_v2',
   PROGRESS: 'my_english_coach_progress_v2',
   SESSIONS: 'my_english_coach_sessions_v2',
+  CONVERSATIONS: 'my_english_coach_conversations_v1',
+  ACTIVE_ID: 'my_english_coach_active_conv_id_v1',
 };
 
 const DEFAULT_STATS: ProgressStats = {
@@ -173,5 +182,143 @@ export const StorageService = {
       console.warn('Storage error saving session summary:', e);
     }
     return updated;
+  },
+
+  // Conversation Sessions (ChatGPT / Gemini style history)
+  getConversations(): ConversationSession[] {
+    if (typeof window === 'undefined') return [];
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.CONVERSATIONS);
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+
+      // Check if legacy messages exist to migrate into a conversation
+      const legacyMessagesStr = localStorage.getItem(STORAGE_KEYS.MESSAGES);
+      if (legacyMessagesStr) {
+        try {
+          const legacyMessages = JSON.parse(legacyMessagesStr);
+          if (Array.isArray(legacyMessages) && legacyMessages.length > 0) {
+            const firstUserMsg = legacyMessages.find((m: any) => m.role === 'user');
+            const topic = firstUserMsg?.topic || 'free';
+            const level = firstUserMsg?.level || 'intermediate';
+            const initialConv: ConversationSession = {
+              id: `conv_${Date.now()}`,
+              title: this.generateTitle(topic, firstUserMsg?.originalText),
+              topic,
+              level,
+              messages: legacyMessages,
+              createdAt: legacyMessages[0]?.timestamp || Date.now(),
+              updatedAt: legacyMessages[legacyMessages.length - 1]?.timestamp || Date.now(),
+            };
+            this.saveConversations([initialConv]);
+            this.setActiveConversationId(initialConv.id);
+            return [initialConv];
+          }
+        } catch {
+          // ignore migration parse error
+        }
+      }
+
+      return [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveConversations(conversations: ConversationSession[]) {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(conversations));
+    } catch (e) {
+      console.warn('Storage error saving conversations:', e);
+    }
+  },
+
+  saveConversation(conversation: ConversationSession): ConversationSession[] {
+    const existing = this.getConversations();
+    const index = existing.findIndex((c) => c.id === conversation.id);
+    let updated: ConversationSession[];
+
+    if (index >= 0) {
+      updated = [...existing];
+      updated[index] = { ...conversation, updatedAt: Date.now() };
+    } else {
+      updated = [conversation, ...existing];
+    }
+
+    // Sort by updatedAt descending
+    updated.sort((a, b) => b.updatedAt - a.updatedAt);
+    this.saveConversations(updated);
+    return updated;
+  },
+
+  deleteConversation(id: string): ConversationSession[] {
+    const existing = this.getConversations();
+    const updated = existing.filter((c) => c.id !== id);
+    this.saveConversations(updated);
+
+    // If active was deleted, clear active ID
+    if (this.getActiveConversationId() === id) {
+      const nextActiveId = updated[0]?.id || '';
+      this.setActiveConversationId(nextActiveId);
+    }
+
+    return updated;
+  },
+
+  getActiveConversationId(): string | null {
+    if (typeof window === 'undefined') return null;
+    try {
+      return localStorage.getItem(STORAGE_KEYS.ACTIVE_ID);
+    } catch {
+      return null;
+    }
+  },
+
+  setActiveConversationId(id: string) {
+    if (typeof window === 'undefined') return;
+    try {
+      if (id) {
+        localStorage.setItem(STORAGE_KEYS.ACTIVE_ID, id);
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.ACTIVE_ID);
+      }
+    } catch {
+      // ignore
+    }
+  },
+
+  generateTitle(topic: PracticeTopic, firstMessage?: string): string {
+    const TOPIC_TITLES: Record<string, string> = {
+      free: 'Free Conversation',
+      daily: 'Daily Life Practice',
+      interview: 'Job Interview Practice',
+      business: 'Business English',
+      travel: 'Travel Conversation',
+      shopping: 'Shopping & Dining',
+      tech: 'Technology & AI',
+      hobbies: 'Hobbies & Free Time',
+    };
+
+    if (firstMessage && firstMessage.trim().length > 0) {
+      // Clean string: remove outer quotes, trim
+      const cleaned = firstMessage
+        .replace(/^["'“”]+|["'“”]+$/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (cleaned.length > 0) {
+        // Capitalize first letter
+        const capitalized = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+        if (capitalized.length <= 30) {
+          return capitalized;
+        }
+        return capitalized.slice(0, 28).trim() + '...';
+      }
+    }
+
+    return TOPIC_TITLES[topic] || 'English Practice';
   },
 };
